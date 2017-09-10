@@ -15,6 +15,9 @@ int main(int argc,char* argv[]) {
     char errbuf[PCAP_ERRBUF_SIZE];
     pcap_t* handler;
     dev = pcap_lookupdev(errbuf);
+    struct bpf_program pf;
+    char filter_exp[] = "port 23";
+
     if(dev == NULL){
             fprintf(stderr,"Couldn't find default device: %s\n", errbuf);
             return(2);
@@ -33,6 +36,15 @@ int main(int argc,char* argv[]) {
     	return(2);
     }
 
+    if(pcap_compile(handler,&pf,filter_exp,0,PCAP_NETMASK_UNKNOWN)){
+    	fprintf(stderr, "Couldn't parse filter %s: %s\n", filter_exp, pcap_geterr(handler));
+    	return(2);
+    }
+
+	 if (pcap_setfilter(handler, &pf) == -1) {
+		 fprintf(stderr, "Couldn't install filter %s: %s\n", filter_exp, pcap_geterr(handler));
+		 return(2);
+	 }
 
     return(0);
 }
