@@ -10,8 +10,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pcap.h>
-int main(void) {
-
-
-	return EXIT_SUCCESS;
+int main(int argc,char* argv[]) {
+    char * dev =argv[1];
+    printf("Device: %s\n",dev);
+	return 0;
 }
