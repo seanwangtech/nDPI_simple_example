@@ -10,6 +10,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pcap.h>
+
+static void callback(u_char *user, const struct pcap_pkthdr *h, const u_char *bytes);
 int main(int argc,char* argv[]) {
     char * dev =argv[1];
     char errbuf[PCAP_ERRBUF_SIZE];
@@ -18,7 +20,6 @@ int main(int argc,char* argv[]) {
     struct bpf_program pf;
     char filter_exp[] = "port 80";
     struct pcap_pkthdr header;
-    const u_char * packet;
 
     if(dev == NULL){
             fprintf(stderr,"Couldn't find default device: %s\n", errbuf);
@@ -26,7 +27,7 @@ int main(int argc,char* argv[]) {
     }
     printf("Device:%s\n",dev);
 
-    handler = pcap_open_live(dev,BUFSIZ,1,10000,errbuf);
+    handler = pcap_open_live(dev,BUFSIZ,1,1000,errbuf);
 
     if(!handler){
     	fprintf(stderr,"Couldn't open device: %s\n",dev);
@@ -48,9 +49,14 @@ int main(int argc,char* argv[]) {
 		 return(2);
 	 }
 
-	 packet = pcap_next(handler,&header);
-	 printf("Jacked a packet with length of [%d]\n", header.len);
+	 pcap_loop(handler,-1,callback, NULL);
+
+	 pcap_freecode(&pf);
 	 pcap_close(handler);
 
 	 return(0);
+}
+
+static void callback(u_char *user, const struct pcap_pkthdr *h, const u_char *bytes){
+	 printf("Jacked a packet with length of [%d]\n", h->len);
 }
