@@ -19,7 +19,6 @@ int main(int argc,char* argv[]) {
     dev = pcap_lookupdev(errbuf);
     struct bpf_program pf;
     char filter_exp[] = "port 80";
-    struct pcap_pkthdr header;
 
     if(dev == NULL){
             fprintf(stderr,"Couldn't find default device: %s\n", errbuf);
@@ -58,5 +57,5 @@ int main(int argc,char* argv[]) {
 }
 
 static void callback(u_char *user, const struct pcap_pkthdr *h, const u_char *bytes){
-	 printf("Jacked a packet with length of [%d]\n", h->len);
+	 printf("Jacked a packet at %ds %dus with length of [%d]\n", h->ts.tv_sec, h->ts.tv_usec,h->len);
 }
