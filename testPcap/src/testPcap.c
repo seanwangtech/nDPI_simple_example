@@ -16,7 +16,9 @@ int main(int argc,char* argv[]) {
     pcap_t* handler;
     dev = pcap_lookupdev(errbuf);
     struct bpf_program pf;
-    char filter_exp[] = "port 23";
+    char filter_exp[] = "port 80";
+    struct pcap_pkthdr header;
+    const u_char * packet;
 
     if(dev == NULL){
             fprintf(stderr,"Couldn't find default device: %s\n", errbuf);
@@ -24,7 +26,7 @@ int main(int argc,char* argv[]) {
     }
     printf("Device:%s\n",dev);
 
-    handler = pcap_open_live(dev,BUFSIZ,1,1000,errbuf);
+    handler = pcap_open_live(dev,BUFSIZ,1,10000,errbuf);
 
     if(!handler){
     	fprintf(stderr,"Couldn't open device: %s\n",dev);
@@ -46,5 +48,9 @@ int main(int argc,char* argv[]) {
 		 return(2);
 	 }
 
-    return(0);
+	 packet = pcap_next(handler,&header);
+	 printf("Jacked a packet with length of [%d]\n", header.len);
+	 pcap_close(handler);
+
+	 return(0);
 }
