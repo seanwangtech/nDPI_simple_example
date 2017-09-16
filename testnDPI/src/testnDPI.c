@@ -50,6 +50,30 @@ struct sniff_ip {
 #define IP_HL(ip)               (((ip)->ip_vhl) & 0x0f)
 #define IP_V(ip)                (((ip)->ip_vhl) >> 4)
 
+/* TCP header */
+typedef u_int tcp_seq;
+
+struct sniff_tcp {
+        u_short th_sport;               /* source port */
+        u_short th_dport;               /* destination port */
+        tcp_seq th_seq;                 /* sequence number */
+        tcp_seq th_ack;                 /* acknowledgement number */
+        u_char  th_offx2;               /* data offset, rsvd */
+#define TH_OFF(th)      (((th)->th_offx2 & 0xf0) >> 4)
+        u_char  th_flags;
+        #define TH_FIN  0x01
+        #define TH_SYN  0x02
+        #define TH_RST  0x04
+        #define TH_PUSH 0x08
+        #define TH_ACK  0x10
+        #define TH_URG  0x20
+        #define TH_ECE  0x40
+        #define TH_CWR  0x80
+        #define TH_FLAGS        (TH_FIN|TH_SYN|TH_RST|TH_ACK|TH_URG|TH_ECE|TH_CWR)
+        u_short th_win;                 /* window */
+        u_short th_sum;                 /* checksum */
+        u_short th_urp;                 /* urgent pointer */
+};
 
 
 struct ndpi_detection_module_struct * ndpi_module;
@@ -130,9 +154,11 @@ static void callback(u_char *user, const struct pcap_pkthdr *h, const u_char *by
 	 printf("Jacked a packet at %d:%d:%d %dus with length of [%d]\n", tm.tm_hour,tm.tm_min,tm.tm_sec,(unsigned int) h->ts.tv_usec,h->caplen);
 
 	 struct sniff_ip * IP = (struct sniff_ip *) (bytes+sizeof(struct sniff_ethernet));
-	 printf("IP SRC:%s and DST:%s\n",inet_ntoa(IP->ip_src),inet_ntoa(IP->ip_dst));
+	 struct sniff_tcp*  tcp = (struct sniff_tcp*) (bytes+sizeof(struct sniff_ethernet)+sizeof(struct sniff_ip));
+	 printf("Flow SRC:%s:%d ",inet_ntoa(IP->ip_src),ntohs(tcp->th_sport));
+	 printf("and DST:%s:%d\n",inet_ntoa(IP->ip_dst),ntohs(tcp->th_dport));
 
-	 int ipsize = h->len - sizeof(struct sniff_ethernet);
+	 int ipsize = h->caplen - sizeof(struct sniff_ethernet);
 
 	 //process a packet
 	 ndpi_protocol detected_protocol = ndpi_detection_process_packet(ndpi_module, ndpi_flow,
@@ -144,7 +170,7 @@ static void callback(u_char *user, const struct pcap_pkthdr *h, const u_char *by
 	 printf("Master and Application Protocol type id is:%d and %d\n",detected_protocol.master_protocol,detected_protocol.app_protocol);
 	 char proto_name[48];
 	 ndpi_protocol2name(ndpi_module, detected_protocol, proto_name, sizeof(proto_name));
-	 printf("Detected Protocol name is:%s\n",proto_name);
+	 printf("Detected Protocol name is:%s\n\n",proto_name);
 
 
 }
