@@ -62,9 +62,11 @@ int main(int argc,char* argv[]) {
     pcap_t* handler;
     dev = pcap_lookupdev(errbuf);
     struct bpf_program pf;
+    //pcap filer, only accept port 80 data to ensure captured data is belong to only one flow.
+    //A flow is set of packets with the same VLAN, protocol, IP/port source/destination -- cite from paper "nDPI -- Open-Source High-Speed Deep Packet Inspection"
     char filter_exp[] = "port 80";
 
-
+    //initialize detection module and a empty flow, according to the nDPI Quick guide chapter 4
     ndpi_module = ndpi_init_detection_module();
     if(ndpi_module == NULL) {
     	fprintf(stderr,"Couldn't initialize nDPI module\n");
@@ -74,7 +76,7 @@ int main(int argc,char* argv[]) {
     NDPI_PROTOCOL_BITMASK all;
     NDPI_BITMASK_SET_ALL(all);
     ndpi_set_protocol_detection_bitmask2(ndpi_module, &all);
-    ndpi_flow = malloc(SIZEOF_FLOW_STRUCT);
+    ndpi_flow = malloc(SIZEOF_FLOW_STRUCT); //ndpi_flow_malloc() is better
     if(ndpi_module == NULL) {
     	fprintf(stderr,"Couldn't initialize ndpi_flow\n");
     	exit(-2);
@@ -82,12 +84,12 @@ int main(int argc,char* argv[]) {
     memset(ndpi_flow,0,SIZEOF_FLOW_STRUCT);
 
 
-
+    //Initialize pcap to capture packet.
     if(dev == NULL){
             fprintf(stderr,"Couldn't find default device: %s\n", errbuf);
             return(2);
     }
-    printf("Device:%s\n",dev);
+    printf("Using network Interface:%s\n",dev);
 
     handler = pcap_open_live(dev,BUFSIZ,1,1000,errbuf);
 
@@ -111,8 +113,12 @@ int main(int argc,char* argv[]) {
 		 return(2);
 	 }
 
+	 //start capturing
 	 pcap_loop(handler,-1,callback, NULL);
 
+
+	 free(ndpi_flow) ; //ndpi_flow_free(ndpi_flow) is better;
+	 ndpi_exit_detection_module(ndpi_module);
 	 pcap_freecode(&pf);
 	 pcap_close(handler);
 
@@ -127,11 +133,18 @@ static void callback(u_char *user, const struct pcap_pkthdr *h, const u_char *by
 	 printf("IP SRC:%s and DST:%s\n",inet_ntoa(IP->ip_src),inet_ntoa(IP->ip_dst));
 
 	 int ipsize = h->len - sizeof(struct sniff_ethernet);
+
+	 //process a packet
 	 ndpi_protocol detected_protocol = ndpi_detection_process_packet(ndpi_module, ndpi_flow,
 	 							  (unsigned char *)IP,
 	 							  ipsize, time(NULL), NULL, NULL);
 
-	 printf("Application Protocol type is:%d\n",detected_protocol.master_protocol);
-	 printf("Application Protocol type is:%d\n",detected_protocol.app_protocol);
+
+
+	 printf("Master and Application Protocol type id is:%d and %d\n",detected_protocol.master_protocol,detected_protocol.app_protocol);
+	 char proto_name[48];
+	 ndpi_protocol2name(ndpi_module, detected_protocol, proto_name, sizeof(proto_name));
+	 printf("Detected Protocol name is:%s\n",proto_name);
+
 
 }
