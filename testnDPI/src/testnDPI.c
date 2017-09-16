@@ -78,7 +78,7 @@ struct sniff_tcp {
 
 struct ndpi_detection_module_struct * ndpi_module;
 struct ndpi_flow_struct * ndpi_flow;
-
+#define TICK_RESOLUTION 1000
 static void callback(u_char *user, const struct pcap_pkthdr *h, const u_char *bytes);
 int main(int argc,char* argv[]) {
     char * dev =argv[1];
@@ -100,7 +100,7 @@ int main(int argc,char* argv[]) {
     NDPI_PROTOCOL_BITMASK all;
     NDPI_BITMASK_SET_ALL(all);
     ndpi_set_protocol_detection_bitmask2(ndpi_module, &all);
-    ndpi_flow = malloc(SIZEOF_FLOW_STRUCT); //ndpi_flow_malloc() is better
+    ndpi_flow = ndpi_malloc(SIZEOF_FLOW_STRUCT);
     if(ndpi_module == NULL) {
     	fprintf(stderr,"Couldn't initialize ndpi_flow\n");
     	exit(-2);
@@ -115,7 +115,7 @@ int main(int argc,char* argv[]) {
     }
     printf("Using network Interface:%s\n",dev);
 
-    handler = pcap_open_live(dev,BUFSIZ,1,1000,errbuf);
+    handler = pcap_open_live(dev,BUFSIZ,1,TICK_RESOLUTION,errbuf);
 
     if(!handler){
     	fprintf(stderr,"Couldn't open device: %s\n",dev);
@@ -141,7 +141,7 @@ int main(int argc,char* argv[]) {
 	 pcap_loop(handler,-1,callback, NULL);
 
 
-	 free(ndpi_flow) ; //ndpi_flow_free(ndpi_flow) is better;
+	 ndpi_free(ndpi_flow) ;
 	 ndpi_exit_detection_module(ndpi_module);
 	 pcap_freecode(&pf);
 	 pcap_close(handler);
@@ -159,11 +159,12 @@ static void callback(u_char *user, const struct pcap_pkthdr *h, const u_char *by
 	 printf("and DST:%s:%d\n",inet_ntoa(IP->ip_dst),ntohs(tcp->th_dport));
 
 	 int ipsize = h->caplen - sizeof(struct sniff_ethernet);
+	 u_int64_t time = ((uint64_t) h->ts.tv_sec) * TICK_RESOLUTION + h->ts.tv_usec / (1000000 / TICK_RESOLUTION);
 
 	 //process a packet
 	 ndpi_protocol detected_protocol = ndpi_detection_process_packet(ndpi_module, ndpi_flow,
 	 							  (unsigned char *)IP,
-	 							  ipsize, time(NULL), NULL, NULL);
+	 							  ipsize, time, NULL, NULL);
 
 
 
