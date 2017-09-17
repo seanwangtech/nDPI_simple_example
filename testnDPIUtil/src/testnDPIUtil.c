@@ -70,6 +70,7 @@ int main(int argc, char* argv[]) {
 	//start capturing
 	pcap_loop(handler,-1,pcap_callback, NULL);
 
+	ndpi_workflow_free( workflow);
 	pcap_close(handler);
 
 	return (0);
