@@ -14,7 +14,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include "libndpi-2.1.0/libndpi/ndpi_api.h"
+#include "ndpi_api.h"
 
 
 
